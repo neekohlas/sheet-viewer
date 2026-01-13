@@ -14,6 +14,19 @@ const CATEGORY_COLORS = {
   medication: { color: "hsl(var(--medication))", label: "Medication" },
   surgery: { color: "hsl(var(--surgery))", label: "Surgery" },
 }
+const matchCategory = (value: string): keyof typeof CATEGORY_COLORS => {
+  const lowerValue = value.toLowerCase()
+  const categories = Object.keys(CATEGORY_COLORS) as (keyof typeof CATEGORY_COLORS)[]
+  for (const category of categories) {
+    if (lowerValue.includes(category)) return category
+  }
+  return "injury"
+}
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
 interface TimelineEvent {
   date: string
   title: string
@@ -51,12 +64,12 @@ const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }:
   return (
     <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-300 ${positionClasses} md:w-80 lg:w-96`} style={{ zIndex }}>
       <div className={`hidden md:block absolute top-1/2 translate-y-[0.35rem] ${event.side === "left" ? "-right-8" : "-left-8"} w-8 border-t-2 opacity-40`} style={{ borderColor: color }} />
-      <div className={`relative bg-card p-3 md:p-4 rounded-xl shadow-sm border-2 cursor-pointer hover:shadow-md transition-all duration-300 ${isExpanded ? "shadow-lg" : ""} ${isOnTop ? "shadow-xl ring-2 ring-primary/20" : ""}`} style={{ borderColor: color }} onClick={() => onEventClick(eventIndex)}>
+      <div className={`relative bg-white p-3 md:p-4 rounded-xl shadow-sm border-2 cursor-pointer hover:shadow-md transition-all duration-300 ${isExpanded ? "shadow-lg" : ""} ${isOnTop ? "shadow-xl ring-2 ring-primary/20" : ""}`} style={{ borderColor: color, backgroundColor: "white" }} onClick={() => onEventClick(eventIndex)}>
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-tight pr-2">{event.title}</h3>
-              <div className="text-xs md:text-sm text-muted-foreground font-medium mt-1">{event.date}</div>
+              <div className="text-xs md:text-sm text-muted-foreground font-medium mt-1">{formatDate(event.date)}</div>
             </div>
             <div className="flex items-center gap-2 ml-2 flex-shrink-0">
               {isExpanded ? <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />}
@@ -120,8 +133,8 @@ export default function MedicalTimeline() {
       for (let i = 1; i < data.length; i++) {
         const row = data[i]
         if (row.length < 3) continue
-        const categoryValue = (row[4] || "injury").toString().trim().toLowerCase()
-        const event: TimelineEvent = { date: row[0] || "", title: row[1] || "", description: row[2] || "", category: categoryValue as keyof typeof CATEGORY_COLORS, url: row[5] || "", side: side }
+        const categoryValue = (row[4] || "injury").toString().trim()
+        const event: TimelineEvent = { date: row[0] || "", title: row[1] || "", description: row[2] || "", category: matchCategory(categoryValue), url: row[5] || "", side: side }
         side = side === "left" ? "right" : "left"
         if (!event.date || !event.title) continue
         parsedEvents.push(event)
@@ -154,7 +167,7 @@ export default function MedicalTimeline() {
         </div>
       )}
       <Legend activeCategories={activeCategories} onToggleCategory={toggleCategory} onRefresh={fetchDataFromSheet} isLoading={isLoading} />
-      <main className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8" style={{ marginTop: "140px", zIndex: 1 }}>
+      <main className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-44 sm:pt-36" style={{ zIndex: 1 }}>
         <section className="mb-6 sm:mb-8 p-4 sm:p-6 bg-card rounded-xl shadow-sm border border-border">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 text-foreground">Timeline Summary</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
