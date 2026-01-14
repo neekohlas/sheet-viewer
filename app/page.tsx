@@ -59,10 +59,10 @@ const Legend = ({ activeCategories, onToggleCategory, onRefresh, isLoading }: { 
 const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }: { event: TimelineEvent; eventIndex: number; onEventClick: (index: number) => void; isExpanded: boolean; isOnTop: boolean }) => {
   const color = CATEGORY_COLORS[event.category].color
   const { toast } = useToast()
-  const positionClasses = event.side === "left" ? "left-4 right-4 md:right-1/2 md:left-auto md:mr-8" : "left-4 right-4 md:left-1/2 md:right-auto md:ml-8"
-  const zIndex = isOnTop ? 100 : isExpanded ? 50 : 10
+  const positionClasses = event.side === "left" ? "left-4 right-4 md:right-1/2 md:left-auto md:mr-12" : "left-4 right-4 md:left-1/2 md:right-auto md:ml-12"
+  const zIndex = isExpanded ? 300 : isOnTop ? 100 : 10
   return (
-    <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-300 ${positionClasses} md:w-80 lg:w-96`} style={{ zIndex }}>
+    <div className={`absolute top-1/2 -translate-y-1/2 ${positionClasses} md:w-80 lg:w-96`} style={{ zIndex }}>
       <div className={`hidden md:block absolute top-1/2 translate-y-[0.35rem] ${event.side === "left" ? "-right-8" : "-left-8"} w-8 border-t-2 opacity-40`} style={{ borderColor: color }} />
       <div className={`relative bg-white p-3 md:p-4 rounded-xl shadow-sm border-2 cursor-pointer hover:shadow-md transition-all duration-300 ${isExpanded ? "shadow-lg" : ""} ${isOnTop ? "shadow-xl ring-2 ring-primary/20" : ""}`} style={{ borderColor: color, backgroundColor: "white" }} onClick={() => onEventClick(eventIndex)}>
         <div className="relative z-10">
@@ -100,8 +100,8 @@ const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }:
   )
 }
 const YearMarker = ({ year, top }: { year: number; top: number }) => (
-  <div className="absolute left-1/2 transform -translate-x-1/2 z-20" style={{ top: `${top}px` }}>
-    <div className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold border border-border shadow-sm" style={{ backgroundColor: "#e8eef4" }}>{year}</div>
+  <div className="absolute left-1/2 transform -translate-x-1/2 z-[200]" style={{ top: `${top}px` }}>
+    <div className="px-2 py-1 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-bold border border-border shadow-sm backdrop-blur-sm" style={{ backgroundColor: "rgba(232, 238, 244, 0.7)" }}>{year}</div>
   </div>
 )
 export default function MedicalTimeline() {
@@ -109,8 +109,7 @@ export default function MedicalTimeline() {
   const [topEvent, setTopEvent] = useState<number | null>(null)
   const [activeCategories, setActiveCategories] = useState(Object.keys(CATEGORY_COLORS))
   const [events, setEvents] = useState<TimelineEvent[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]
   const { spacedEvents, yearPositions, totalHeight } = useMemo(() => {
@@ -127,7 +126,7 @@ export default function MedicalTimeline() {
     const yearStarts = new Map<number, number>()
     for (const event of withDates) {
       if (!yearStarts.has(event.year)) {
-        currentPosition = Math.max(currentPosition, currentPosition + BASE_YEAR_PADDING)
+        currentPosition = currentPosition + BASE_YEAR_PADDING + 40
         yearStarts.set(event.year, currentPosition)
       }
       positioned.push({ ...event, position: currentPosition })
@@ -137,7 +136,7 @@ export default function MedicalTimeline() {
     years.forEach(year => {
       const yearStart = yearStarts.get(year)
       if (yearStart !== undefined) {
-        yearPos.set(year, yearStart - 30)
+        yearPos.set(year, yearStart - 50)
       } else {
         const prevYears = years.filter(y => y < year && yearStarts.has(y))
         if (prevYears.length > 0) {
@@ -170,7 +169,6 @@ export default function MedicalTimeline() {
         parsedEvents.push(event)
       }
       setEvents(parsedEvents)
-      toast({ title: `Timeline refreshed! ${parsedEvents.length} events loaded` })
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({ title: "Error loading data", description: "Please try again", variant: "destructive" })
@@ -181,20 +179,8 @@ export default function MedicalTimeline() {
   useEffect(() => { fetchDataFromSheet() }, [])
   const toggleCategory = (category: string) => { setActiveCategories((prev) => (prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category])) }
   const handleEventClick = (eventIndex: number) => { setTopEvent(eventIndex); const newExpandedEvents = new Set(expandedEvents); if (expandedEvents.has(eventIndex)) { newExpandedEvents.delete(eventIndex) } else { newExpandedEvents.add(eventIndex) }; setExpandedEvents(newExpandedEvents) }
-  const handleWelcomeRefresh = () => { setShowWelcomeModal(false); fetchDataFromSheet() }
   return (
     <div className="min-h-screen bg-background">
-      {showWelcomeModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-foreground mb-3">Medical Timeline</h2>
-            <p className="text-muted-foreground mb-6">This is a comprehensive timeline documenting a chronic low back pain journey from 2019 to 2027. Click refresh to load the latest data from the medical records.</p>
-            <Button onClick={handleWelcomeRefresh} disabled={isLoading} className="w-full gap-2" size="lg" style={{ backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
-              {isLoading ? (<><Loader2 className="w-4 h-4 animate-spin" />Loading...</>) : (<><RefreshCw className="w-4 h-4" />Refresh Timeline</>)}
-            </Button>
-          </div>
-        </div>
-      )}
       <Legend activeCategories={activeCategories} onToggleCategory={toggleCategory} onRefresh={fetchDataFromSheet} isLoading={isLoading} />
       <main className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-44 sm:pt-36" style={{ zIndex: 1 }}>
         <section className="mb-6 sm:mb-8 p-4 sm:p-6 bg-card rounded-xl shadow-sm border border-border">
