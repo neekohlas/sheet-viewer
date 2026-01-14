@@ -3,8 +3,8 @@ import { useState, useMemo, useEffect } from "react"
 import { ChevronDown, ChevronUp, Share2, Calendar, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-const MIN_YEAR_HEIGHT = 800
-const PIXELS_PER_EVENT = 100
+const MIN_EVENT_SPACING = 140
+const BASE_YEAR_PADDING = 60
 const CATEGORY_COLORS = {
   injury: { color: "hsl(var(--injury))", label: "Injury" },
   diagnostic: { color: "hsl(var(--diagnostic))", label: "Diagnostic Tests" },
@@ -101,7 +101,7 @@ const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }:
 }
 const YearMarker = ({ year, top }: { year: number; top: number }) => (
   <div className="absolute left-1/2 transform -translate-x-1/2 z-20" style={{ top: `${top}px` }}>
-    <div className="bg-secondary px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold border border-border shadow-sm">{year}</div>
+    <div className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold border border-border shadow-sm" style={{ backgroundColor: "#e8eef4" }}>{year}</div>
   </div>
 )
 export default function MedicalTimeline() {
@@ -113,16 +113,46 @@ export default function MedicalTimeline() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(true)
   const { toast } = useToast()
   const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]
-  const yearBoundaries = useMemo(() => {
-    const boundaries = new Map<number, { start: number; end: number }>()
-    const eventCountByYear = new Map<number, number>()
-    events.forEach((event) => { const year = new Date(event.date).getFullYear(); eventCountByYear.set(year, (eventCountByYear.get(year) || 0) + 1) })
-    let currentTop = 0
-    years.forEach((year) => { const eventCount = eventCountByYear.get(year) || 0; const yearHeight = MIN_YEAR_HEIGHT + eventCount * PIXELS_PER_EVENT; boundaries.set(year, { start: currentTop, end: currentTop + yearHeight }); currentTop += yearHeight })
-    return boundaries
-  }, [events, years])
-  const TIMELINE_HEIGHT = useMemo(() => { const lastYear = years[years.length - 1]; const lastBoundary = yearBoundaries.get(lastYear); return lastBoundary ? lastBoundary.end : 25000 }, [yearBoundaries, years])
-  const calculatePosition = (date: string) => { const eventDate = new Date(date); const year = eventDate.getFullYear(); const boundary = yearBoundaries.get(year); if (!boundary) return 0; const yearStart = new Date(year, 0, 1); const yearEnd = new Date(year, 11, 31, 23, 59, 59); const yearDuration = yearEnd.getTime() - yearStart.getTime(); const timeSinceYearStart = eventDate.getTime() - yearStart.getTime(); const positionInYear = Math.max(0, Math.min(1, timeSinceYearStart / yearDuration)); const yearHeight = boundary.end - boundary.start; return boundary.start + positionInYear * yearHeight }
+  const { spacedEvents, yearPositions, totalHeight } = useMemo(() => {
+    const filtered = events.filter((event) => activeCategories.includes(event.category))
+    const withDates = filtered.map((event, index) => ({
+      ...event,
+      originalIndex: index,
+      timestamp: new Date(event.date).getTime(),
+      year: new Date(event.date).getFullYear()
+    }))
+    withDates.sort((a, b) => a.timestamp - b.timestamp)
+    const positioned: Array<typeof withDates[0] & { position: number }> = []
+    let currentPosition = BASE_YEAR_PADDING
+    const yearStarts = new Map<number, number>()
+    for (const event of withDates) {
+      if (!yearStarts.has(event.year)) {
+        currentPosition = Math.max(currentPosition, currentPosition + BASE_YEAR_PADDING)
+        yearStarts.set(event.year, currentPosition)
+      }
+      positioned.push({ ...event, position: currentPosition })
+      currentPosition += MIN_EVENT_SPACING
+    }
+    const yearPos = new Map<number, number>()
+    years.forEach(year => {
+      const yearStart = yearStarts.get(year)
+      if (yearStart !== undefined) {
+        yearPos.set(year, yearStart - 30)
+      } else {
+        const prevYears = years.filter(y => y < year && yearStarts.has(y))
+        if (prevYears.length > 0) {
+          const lastYear = Math.max(...prevYears)
+          const lastYearEvents = positioned.filter(e => e.year === lastYear)
+          const lastEventPos = lastYearEvents.length > 0 ? Math.max(...lastYearEvents.map(e => e.position)) : yearStarts.get(lastYear) || 0
+          yearPos.set(year, lastEventPos + MIN_EVENT_SPACING)
+        } else {
+          yearPos.set(year, BASE_YEAR_PADDING)
+        }
+      }
+    })
+    const height = positioned.length > 0 ? Math.max(...positioned.map(e => e.position)) + 200 : 1000
+    return { spacedEvents: positioned, yearPositions: yearPos, totalHeight: height }
+  }, [events, activeCategories, years])
   const fetchDataFromSheet = async () => {
     setIsLoading(true)
     try {
@@ -149,7 +179,6 @@ export default function MedicalTimeline() {
     }
   }
   useEffect(() => { fetchDataFromSheet() }, [])
-  const processedEvents = useMemo(() => { const filtered = events.filter((event) => activeCategories.includes(event.category)); const positioned = filtered.map((event, index) => ({ ...event, originalIndex: index, position: calculatePosition(event.date) })); positioned.sort((a, b) => a.position - b.position); return positioned }, [events, activeCategories])
   const toggleCategory = (category: string) => { setActiveCategories((prev) => (prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category])) }
   const handleEventClick = (eventIndex: number) => { setTopEvent(eventIndex); const newExpandedEvents = new Set(expandedEvents); if (expandedEvents.has(eventIndex)) { newExpandedEvents.delete(eventIndex) } else { newExpandedEvents.add(eventIndex) }; setExpandedEvents(newExpandedEvents) }
   const handleWelcomeRefresh = () => { setShowWelcomeModal(false); fetchDataFromSheet() }
@@ -177,10 +206,10 @@ export default function MedicalTimeline() {
           </div>
           <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">This timeline represents a comprehensive medical journey from initial injury through various treatments, setbacks, and ongoing management. Events are automatically spaced for clarity, and same-date events are grouped together.</p>
         </section>
-        <div className="relative" style={{ height: `${TIMELINE_HEIGHT + 500}px`, overflow: "visible" }}>
-          {years.map((year) => { const boundary = yearBoundaries.get(year); const yearTop = boundary ? boundary.start : 0; return <YearMarker key={year} year={year} top={yearTop} /> })}
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-1 rounded-full" style={{ height: `${TIMELINE_HEIGHT}px`, background: "linear-gradient(180deg, hsl(var(--border)) 0%, hsl(var(--primary)) 50%, hsl(var(--border)) 100%)" }} />
-          {processedEvents.map((event, index) => (
+        <div className="relative" style={{ height: `${totalHeight + 300}px`, overflow: "visible" }}>
+          {years.map((year) => { const yearTop = yearPositions.get(year) || 0; return <YearMarker key={year} year={year} top={yearTop} /> })}
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-1 rounded-full" style={{ height: `${totalHeight}px`, background: "linear-gradient(180deg, hsl(var(--border)) 0%, hsl(var(--primary)) 50%, hsl(var(--border)) 100%)" }} />
+          {spacedEvents.map((event, index) => (
             <div key={index} className="absolute w-full" style={{ top: `${event.position}px` }}>
               <div className="relative">
                 <div className="absolute left-1/2 transform -translate-x-1/2 z-[5]">
