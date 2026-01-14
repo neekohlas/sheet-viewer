@@ -36,10 +36,10 @@ interface TimelineEvent {
   side?: "left" | "right"
 }
 const Legend = ({ activeCategories, onToggleCategory, onRefresh, isLoading }: { activeCategories: string[]; onToggleCategory: (category: string) => void; onRefresh: () => void; isLoading: boolean }) => (
-  <header className="fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-md shadow-md border-b border-border z-50">
+  <header className="fixed top-0 left-0 right-0 backdrop-blur-md border-b border-border/50 z-50" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,247,255,0.95) 100%)", boxShadow: "0 4px 20px -5px rgba(0,0,0,0.1), 0 2px 6px -2px rgba(0,0,0,0.05)" }}>
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-5">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">Medical Timeline (2019-2027)</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground tracking-tight">Medical Timeline (2019-2027)</h1>
         <Button onClick={onRefresh} disabled={isLoading} size="sm" className="gap-2" style={{ backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           <span className="hidden sm:inline">Refresh</span>
@@ -64,12 +64,12 @@ const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }:
   return (
     <div className={`absolute top-1/2 -translate-y-1/2 ${positionClasses} md:w-80 lg:w-96`} style={{ zIndex }}>
       <div className={`hidden md:block absolute top-1/2 translate-y-[0.35rem] ${event.side === "left" ? "-right-8" : "-left-8"} w-8 border-t-2 opacity-40`} style={{ borderColor: color }} />
-      <div className={`relative bg-white p-3 md:p-4 rounded-xl shadow-sm border-2 cursor-pointer hover:shadow-md transition-all duration-300 ${isExpanded ? "shadow-lg" : ""} ${isOnTop ? "shadow-xl ring-2 ring-primary/20" : ""}`} style={{ borderColor: color, backgroundColor: "white" }} onClick={() => onEventClick(eventIndex)}>
+      <div className={`relative bg-white p-3 md:p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 ${isExpanded ? "" : ""} ${isOnTop ? "ring-2 ring-primary/20" : ""}`} style={{ borderColor: color, backgroundColor: "white", boxShadow: isExpanded ? "0 20px 40px -10px rgba(0,0,0,0.15), 0 8px 16px -6px rgba(0,0,0,0.1)" : "0 4px 12px -2px rgba(0,0,0,0.08), 0 2px 6px -2px rgba(0,0,0,0.06)" }} onClick={() => onEventClick(eventIndex)}>
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-tight pr-2">{event.title}</h3>
-              <div className="text-xs md:text-sm text-muted-foreground font-medium mt-1">{formatDate(event.date)}</div>
+              <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-snug tracking-tight pr-2">{event.title}</h3>
+              <div className="text-xs md:text-sm text-muted-foreground font-medium mt-1.5 tracking-wide uppercase" style={{ fontSize: "0.65rem" }}>{formatDate(event.date)}</div>
             </div>
             <div className="flex items-center gap-2 ml-2 flex-shrink-0">
               {isExpanded ? <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />}
@@ -101,7 +101,7 @@ const TimelineEvent = ({ event, eventIndex, onEventClick, isExpanded, isOnTop }:
 }
 const YearMarker = ({ year, top }: { year: number; top: number }) => (
   <div className="absolute left-1/2 transform -translate-x-1/2 z-[200]" style={{ top: `${top}px` }}>
-    <div className="px-2 py-1 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-bold border border-border shadow-sm backdrop-blur-sm" style={{ backgroundColor: "rgba(232, 238, 244, 0.7)" }}>{year}</div>
+    <div className="px-2.5 py-1 sm:px-4 sm:py-2 rounded-full text-[10px] sm:text-sm font-bold border border-border/60 backdrop-blur-sm tracking-wide" style={{ backgroundColor: "rgba(232, 238, 244, 0.7)", boxShadow: "0 2px 8px -2px rgba(0,0,0,0.1)" }}>{year}</div>
   </div>
 )
 export default function MedicalTimeline() {
@@ -183,8 +183,8 @@ export default function MedicalTimeline() {
     <div className="min-h-screen bg-background">
       <Legend activeCategories={activeCategories} onToggleCategory={toggleCategory} onRefresh={fetchDataFromSheet} isLoading={isLoading} />
       <main className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-44 sm:pt-36" style={{ zIndex: 1 }}>
-        <section className="mb-6 sm:mb-8 p-4 sm:p-6 bg-card rounded-xl shadow-sm border border-border">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-foreground">Timeline Summary</h2>
+        <section className="mb-6 sm:mb-8 p-4 sm:p-6 bg-card rounded-xl border border-border" style={{ boxShadow: "0 4px 16px -4px rgba(0,0,0,0.08), 0 2px 8px -4px rgba(0,0,0,0.04)" }}>
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-foreground tracking-tight">Timeline Summary</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
             <div><span className="font-medium text-foreground">Total Events:</span> <span className="text-muted-foreground">{events.length}</span></div>
             <div><span className="font-medium text-foreground">Time Span:</span> <span className="text-muted-foreground">9+ years</span></div>
@@ -194,7 +194,7 @@ export default function MedicalTimeline() {
         </section>
         <div className="relative" style={{ height: `${totalHeight + 300}px`, overflow: "visible" }}>
           {years.map((year) => { const yearTop = yearPositions.get(year) || 0; return <YearMarker key={year} year={year} top={yearTop} /> })}
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-1 rounded-full" style={{ height: `${totalHeight}px`, background: "linear-gradient(180deg, hsl(var(--border)) 0%, hsl(var(--primary)) 50%, hsl(var(--border)) 100%)" }} />
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-1 rounded-full" style={{ height: `${totalHeight}px`, background: "linear-gradient(180deg, hsl(var(--border)) 0%, hsl(var(--primary)) 50%, hsl(var(--border)) 100%)", boxShadow: "0 0 20px 2px hsla(var(--primary), 0.3), 0 0 8px 1px hsla(var(--primary), 0.2)" }} />
           {spacedEvents.map((event, index) => (
             <div key={index} className="absolute w-full" style={{ top: `${event.position}px` }}>
               <div className="relative">
